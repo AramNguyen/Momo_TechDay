@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { STAGE_LABELS, TACTIC_LABELS, type BaitReport, type ChatTurn } from '@/lib/types';
+import { readJson } from '@/lib/api-client';
 
 const ROLES = [
   { label: 'Công an báo dính rửa tiền', opener: 'Alo, tôi là cán bộ công an phường. Bà đang liên quan đến một đường dây rửa tiền, bà cần hợp tác ngay.' },
@@ -58,9 +59,8 @@ export default function ThuLuaBa() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
-      setTurns([...next, { role: 'assistant', content: data.reply as string }]);
+      const data = await readJson<{ reply: string }>(res);
+      setTurns([...next, { role: 'assistant', content: data.reply }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
       setTurns(turns); // trả lại trạng thái cũ để thứ tự user/assistant không lệch
@@ -81,10 +81,9 @@ export default function ThuLuaBa() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ messages: turns, durationSec: dur }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+      const data = await readJson<{ report: BaitReport }>(res);
       setDuration(dur);
-      setReport(data.report as BaitReport);
+      setReport(data.report);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
     } finally {
@@ -103,17 +102,17 @@ export default function ThuLuaBa() {
   return (
     <>
       <section className="hero">
-        <h1>Thử lừa Bà 😈</h1>
-        <p>
-          Con đóng vai <b>kẻ lừa đảo</b>, cố lừa bà Tư (68 tuổi) chuyển tiền hoặc đưa OTP. Bà sẽ câu giờ và moi ngược thông tin
-          của con. Bấm <b>Kết thúc</b> để xem báo cáo.
+        <h1>Thử lừa Bà</h1>
+        <p className="lede">
+          Con đóng vai kẻ lừa đảo, tìm cách bắt bà Tư (68 tuổi) chuyển tiền hoặc đọc mã OTP. Bà sẽ câu giờ và moi ngược thông tin
+          của con. Bấm Kết thúc để xem báo cáo.
         </p>
         <p className="muted small">Cuộc chat này được lưu để cải thiện Bà, đừng nhập thông tin thật của con.</p>
       </section>
 
       {turns.length === 0 && (
         <div className="samples">
-          <span className="muted">Gợi ý vai:</span>
+          <span className="muted small">Chưa biết mở lời sao? Chọn một vai:</span>
           {ROLES.map((r) => (
             <button key={r.label} type="button" className="chip-btn" onClick={() => setInput(r.opener)}>
               {r.label}
@@ -122,15 +121,21 @@ export default function ThuLuaBa() {
         </div>
       )}
 
-      <section className="card chat">
+      <section className="sheet chat">
         <div className="chat-head">
-          <div>
-            👵 <b>Bà Tư</b> <span className="muted small">· đang online</span>
+          <div className="chat-who">
+            <span className="online-dot" aria-hidden />
+            <strong>Bà Tư</strong>
+            <span className="muted small">đang online</span>
           </div>
-          {startedAt && <div className="timer">⏱ Đã câu giờ {fmt(elapsed)}</div>}
+          {startedAt && (
+            <div className="timer">
+              Đã câu giờ <span>{fmt(elapsed)}</span>
+            </div>
+          )}
         </div>
         <div className="chat-body">
-          {turns.length === 0 && <p className="muted center">Nhắn tin đầu tiên để bắt đầu lừa bà…</p>}
+          {turns.length === 0 && <p className="muted chat-empty">Gửi tin đầu tiên để bắt đầu lừa bà.</p>}
           {turns.map((t, i) => (
             <div key={i} className={`bubble ${t.role === 'user' ? 'me' : 'ba'}`}>
               {t.content}
@@ -142,6 +147,7 @@ export default function ThuLuaBa() {
         {!report && (
           <div className="chat-input">
             <input
+              aria-label="Tin nhắn gửi bà"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -150,7 +156,7 @@ export default function ThuLuaBa() {
                   void sendMsg();
                 }
               }}
-              placeholder={full ? 'Hết lượt, bấm Kết thúc nha' : 'Nhắn cho bà như một kẻ lừa đảo…'}
+              placeholder={full ? 'Hết lượt, bấm Kết thúc nha' : 'Nhắn cho bà như một kẻ lừa đảo'}
               maxLength={1000}
               disabled={loading || full}
             />
@@ -162,12 +168,16 @@ export default function ThuLuaBa() {
             </button>
           </div>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
 
       {report && (
-        <section className="card report">
-          <h2>📋 Báo cáo của Bà</h2>
+        <section className="sheet report">
+          <h2>Báo cáo của Bà</h2>
           <div className="stats">
             <div>
               <b>{fmt(duration)}</b>
@@ -215,7 +225,7 @@ export default function ThuLuaBa() {
 
           {report.extracted_info.length > 0 && (
             <>
-              <h3>🕵️ Bà đã moi được</h3>
+              <h3>Bà đã moi được</h3>
               <ul>
                 {report.extracted_info.map((x, i) => (
                   <li key={i}>
@@ -228,7 +238,7 @@ export default function ThuLuaBa() {
 
           {report.highlights.length > 0 && (
             <>
-              <h3>😂 Câu đỉnh nhất của bà</h3>
+              <h3>Câu đỉnh nhất của bà</h3>
               {report.highlights.map((h, i) => (
                 <blockquote key={i} className="grandma">
                   “{h}”
@@ -239,7 +249,7 @@ export default function ThuLuaBa() {
 
           {report.lessons.length > 0 && (
             <>
-              <h3>📌 Bài học cho mọi người</h3>
+              <h3>Bài học cho mọi người</h3>
               <ul>
                 {report.lessons.map((x, i) => (
                   <li key={i}>{x}</li>

@@ -4,6 +4,7 @@ import { useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
 import ResultCard from '@/components/ResultCard';
 import { fileToJpegBase64 } from '@/lib/image-client';
 import type { AnalyzeResponse } from '@/lib/types';
+import { readJson } from '@/lib/api-client';
 
 // Tin mẫu tự viết cho giám khảo bấm thử (số/link đều là giả, trùng với dữ liệu seed)
 const SAMPLES = [
@@ -76,9 +77,7 @@ export default function Home() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text, image: image ? { data: image.data, mediaType: 'image/jpeg' } : undefined }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
-      setResult(data as AnalyzeResponse);
+      setResult(await readJson<AnalyzeResponse>(res));
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
@@ -90,19 +89,23 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <h1>Gặp lừa đảo? Gọi Bà!</h1>
-        <p>
-          Dán tin nhắn hoặc gửi <b>ảnh chụp màn hình</b> Zalo, Messenger, SMS khả nghi. Bà vạch mặt chiêu lừa, chỉ con việc cần
-          làm, rồi soạn sẵn câu để con <b>troll câu giờ</b> tụi nó.
+        <h1>Gặp lừa đảo? Gọi Bà.</h1>
+        <p className="lede">
+          Dán tin nhắn hoặc gửi ảnh chụp màn hình Zalo, Messenger, SMS mà con thấy khả nghi. Bà nói con nghe có phải lừa không,
+          con cần làm gì ngay, rồi soạn sẵn câu để con câu giờ kẻ lừa.
         </p>
       </section>
 
-      <section className="card" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+      <section className="sheet ask" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+        <label htmlFor="tin-nhan" className="sr-only">
+          Nội dung tin nhắn khả nghi
+        </label>
         <textarea
+          id="tin-nhan"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onPaste={onPaste}
-          placeholder="Dán nội dung tin nhắn vào đây (hoặc dán thẳng ảnh chụp màn hình bằng Ctrl+V)…"
+          placeholder="Dán nội dung tin nhắn vào đây, hoặc dán thẳng ảnh chụp màn hình bằng Ctrl+V"
           rows={5}
           maxLength={6000}
         />
@@ -119,7 +122,7 @@ export default function Home() {
 
         <div className="actions">
           <button type="button" className="btn-secondary" onClick={() => fileRef.current?.click()}>
-            📷 {image ? 'Đổi ảnh' : 'Gửi ảnh chụp màn hình'}
+            {image ? 'Đổi ảnh' : 'Gửi ảnh chụp màn hình'}
           </button>
           <input
             ref={fileRef}
@@ -137,7 +140,7 @@ export default function Home() {
         </div>
 
         <div className="samples">
-          <span className="muted">Thử tin mẫu:</span>
+          <span className="muted small">Chưa có tin nào? Thử tin mẫu:</span>
           {SAMPLES.map((s) => (
             <button
               key={s.label}
@@ -153,14 +156,18 @@ export default function Home() {
           ))}
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
 
       <div ref={resultRef}>{result && <ResultCard r={result} />}</div>
 
       {botUser && (
-        <section className="card tg">
-          <b>Bà có mặt trên Telegram:</b> chuyển tiếp tin nhắn hoặc gửi ảnh cho{' '}
+        <section className="tg">
+          Bà cũng có mặt trên Telegram: chuyển tiếp tin nhắn hoặc gửi ảnh cho{' '}
           <a href={`https://t.me/${botUser}`} target="_blank" rel="noreferrer">
             @{botUser}
           </a>

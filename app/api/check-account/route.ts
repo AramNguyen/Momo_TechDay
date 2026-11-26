@@ -4,6 +4,7 @@ import { db } from '@/lib/supabase';
 import { allow, clientIp } from '@/lib/ratelimit';
 import { maskIoc, queryCandidates } from '@/lib/ioc';
 import type { CheckMatch, CheckResponse, IocType } from '@/lib/types';
+import { userError } from '@/lib/server-error';
 
 export const runtime = 'nodejs';
 
@@ -62,6 +63,6 @@ export async function GET(req: Request) {
     return Response.json(res, { headers: CORS });
   } catch (e) {
     console.error('[api/check-account]', e);
-    return Response.json({ error: 'Lỗi tra cứu, thử lại sau.' }, { status: 500, headers: CORS });
+    return Response.json({ error: userError(e, 'Lỗi tra cứu, thử lại sau.') }, { status: 500, headers: CORS });
   }
 }

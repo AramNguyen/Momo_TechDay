@@ -1,8 +1,9 @@
 // "Thử lừa Bà": mỗi lượt client gửi toàn bộ lịch sử chat, bà Tư trả lời 1 tin.
-import { callClaude } from '@/lib/claude';
+import { callAI } from '@/lib/llm';
 import { BAIT_SYSTEM } from '@/lib/prompts';
 import { clientIp, guard } from '@/lib/ratelimit';
 import { validateTurns } from '@/lib/turns';
+import { userError } from '@/lib/server-error';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -22,10 +23,10 @@ export async function POST(req: Request) {
   if (blocked) return Response.json({ error: blocked }, { status: 429 });
 
   try {
-    const reply = await callClaude({ system: BAIT_SYSTEM, messages: turns, maxTokens: 400 });
+    const reply = await callAI({ system: BAIT_SYSTEM, messages: turns, maxTokens: 400, tier: 'chat' });
     return Response.json({ reply: reply || 'Alo... con nói gì bà nghe hông rõ.' });
   } catch (e) {
     console.error('[api/bait]', e);
-    return Response.json({ error: 'Bà rớt mạng rồi, con nhắn lại nha.' }, { status: 500 });
+    return Response.json({ error: userError(e, 'Bà rớt mạng rồi, con nhắn lại nha.') }, { status: 500 });
   }
 }

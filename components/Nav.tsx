@@ -14,16 +14,23 @@ export default function Nav() {
   const pathname = usePathname();
   return (
     <header className="nav">
-      <Link href="/" className="brand">
-        <span aria-hidden>👵</span> Bà Ngoại AI
-      </Link>
-      <nav>
-        {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className={pathname === l.href ? 'active' : ''}>
-            {l.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="nav-inner">
+        <Link href="/" className="brand">
+          Bà Ngoại AI
+        </Link>
+        <nav aria-label="Điều hướng chính">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={pathname === l.href ? 'active' : ''}
+              aria-current={pathname === l.href ? 'page' : undefined}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
     </header>
   );
 }

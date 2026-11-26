@@ -55,8 +55,8 @@ export default async function CanhBao() {
   } catch (e) {
     console.error('[canh-bao]', e);
     return (
-      <section className="card">
-        <p className="error">Chưa tải được bản tin. Kiểm tra lại kết nối Supabase.</p>
+      <section className="sheet">
+        <p className="error">Chưa tải được bản tin. Kiểm tra SUPABASE_URL và SUPABASE_SERVICE_ROLE_KEY trong .env.local.</p>
       </section>
     );
   }
@@ -75,8 +75,10 @@ export default async function CanhBao() {
   return (
     <>
       <section className="hero">
-        <h1>📰 Bản tin lừa đảo</h1>
-        <p>Các chiêu lừa người dân vừa gửi cho Bà. Kịch bản gắn nhãn MỚI là chiêu xuất hiện trong 7 ngày gần đây.</p>
+        <h1>Bản tin lừa đảo</h1>
+        <p className="lede">
+          Các chiêu lừa người dân vừa gửi cho Bà, mới nhất ở trên. Nhãn Mới là chiêu xuất hiện trong 7 ngày gần đây.
+        </p>
       </section>
 
       <section className="stats">
@@ -93,23 +95,24 @@ export default async function CanhBao() {
           <span>STK/SĐT/link trong sổ đen</span>
         </div>
       </section>
-      {totalSim > 0 && <p className="muted small center">Bao gồm {totalSim} mẫu mô phỏng dùng để demo, được tính riêng.</p>}
+      {totalSim > 0 && <p className="muted small">Ngoài ra có {totalSim} mẫu mô phỏng dùng để demo, được tính riêng.</p>}
 
       {scenarios.map((s) => {
         const isNew = isNewScenario(s.first_report);
         const iocs = iocsByScenario.get(s.id) ?? [];
         return (
-          <article key={s.id} className="card feed-item">
+          <article key={s.id} className="feed-item">
             <div className="feed-head">
               <h2>
-                {s.name} {isNew && <span className="tag-new">MỚI</span>}
+                {s.name}
+                {isNew && <span className="tag-new">Mới</span>}
               </h2>
               <span className="muted small">{ago(s.last_seen)}</span>
             </div>
             <p>{s.description}</p>
             <div className="crowd">
-              👥 <b>{s.real_count}</b> người đã gặp
-              {Number(s.sim_count) > 0 && <span className="muted"> (+{s.sim_count} mẫu mô phỏng)</span>}
+              <strong>{s.real_count}</strong> người đã gặp
+              {Number(s.sim_count) > 0 && <span className="muted"> (thêm {s.sim_count} mẫu mô phỏng)</span>}
             </div>
             {s.sample_phrases && s.sample_phrases.length > 0 && (
               <blockquote className="phrase">“{s.sample_phrases[0]}”</blockquote>
@@ -127,8 +130,8 @@ export default async function CanhBao() {
               <div className="ioc-line">
                 {iocs.map((i) => (
                   <span key={i.type + i.value_normalized} className="ioc">
-                    {IOC_TYPE_LABELS[i.type]} <code>{maskIoc(i.type, i.value_normalized)}</code>
-                    {i.bank ? ` · ${i.bank}` : ''}
+                    <span className="ioc-type">{IOC_TYPE_LABELS[i.type]}</span> <code>{maskIoc(i.type, i.value_normalized)}</code>
+                    {i.bank ? <span className="muted">{i.bank}</span> : null}
                   </span>
                 ))}
               </div>
@@ -138,7 +141,7 @@ export default async function CanhBao() {
       })}
 
       {scenarios.length === 0 && (
-        <section className="card">
+        <section className="sheet">
           <p className="muted">Chưa có kịch bản nào. Chạy file supabase/seed.sql hoặc gửi thử một tin ở trang Gọi Bà.</p>
         </section>
       )}

@@ -1,11 +1,12 @@
 import { analyzeAndStore } from '@/lib/analyze';
 import { clientIp, guard } from '@/lib/ratelimit';
+import { userError } from '@/lib/server-error';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_IMAGE_B64 = 5_500_000; // ~4MB ảnh, dưới giới hạn body 4.5MB của Vercel sau khi client đã nén
+const MAX_IMAGE_B64 = 4_000_000; // ~3MB ảnh; body request của Vercel tối đa 4.5MB (client đã nén trước khi gửi)
 
 export async function POST(req: Request) {
   let body: { text?: unknown; image?: { data?: unknown; mediaType?: unknown } };
@@ -38,6 +39,6 @@ export async function POST(req: Request) {
     return Response.json(result);
   } catch (e) {
     console.error('[api/analyze]', e);
-    return Response.json({ error: 'Bà đang bận xíu, con thử lại sau nha.' }, { status: 500 });
+    return Response.json({ error: userError(e, 'Bà đang bận xíu, con thử lại sau nha.') }, { status: 500 });
   }
 }

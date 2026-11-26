@@ -1,5 +1,5 @@
 // Lõi "Gọi Bà": phân tích tin nhắn/ảnh → lưu kho → trả kết quả kèm thống kê kịch bản.
-import { callClaude, parseJson, type ClaudeMessage } from './claude';
+import { callAI, parseJson, type AIMessage } from './llm';
 import { db } from './supabase';
 import { ANALYZE_SYSTEM } from './prompts';
 import { normalizeIoc } from './ioc';
@@ -38,7 +38,13 @@ function sanitize(raw: RawAnalysis): RawAnalysis {
   return {
     verdict,
     risk: Math.max(0, Math.min(100, Math.round(Number(raw.risk) || 0))),
-    scenario_match_id: typeof raw.scenario_match_id === 'number' ? raw.scenario_match_id : null,
+    // Gemini hay trả id dạng chuỗi ("3"), nên chấp nhận cả hai
+    scenario_match_id:
+      raw.scenario_match_id !== null &&
+      raw.scenario_match_id !== undefined &&
+      Number.isInteger(Number(raw.scenario_match_id))
+        ? Number(raw.scenario_match_id)
+        : null,
     new_scenario:
       ns && typeof ns.name === 'string' && ns.name.trim()
         ? { name: ns.name.trim().slice(0, 80), description: String(ns.description ?? '').trim().slice(0, 400) }
@@ -59,7 +65,7 @@ function sanitize(raw: RawAnalysis): RawAnalysis {
 export async function analyzeAndStore(input: AnalyzeInput): Promise<AnalyzeResponse> {
   const supa = db();
 
-  // 1. Lấy kho kịch bản để Claude xếp loại
+  // 1. Lấy kho kịch bản để AI xếp loại
   const { data: scenarios, error: scenErr } = await supa
     .from('scenarios')
     .select('id,name,description')
@@ -70,8 +76,8 @@ export async function analyzeAndStore(input: AnalyzeInput): Promise<AnalyzeRespo
   const list = rows.map((s) => `${s.id} | ${s.name} | ${s.description}`).join('\n') || '(kho đang trống)';
   const known = new Set<number>(rows.map((s) => s.id));
 
-  // 2. Gọi Claude
-  const content: Exclude<ClaudeMessage['content'], string> = [];
+  // 2. Gọi AI
+  const content: Exclude<AIMessage['content'], string> = [];
   if (input.image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: input.image.mediaType, data: input.image.data } });
   }
@@ -83,10 +89,11 @@ export async function analyzeAndStore(input: AnalyzeInput): Promise<AnalyzeRespo
       : 'Con cháu gửi cho bà ảnh chụp màn hình ở trên. Hãy đọc nội dung trong ảnh và phân tích.',
   });
 
-  const raw = await callClaude({
+  const raw = await callAI({
     system: ANALYZE_SYSTEM.replace('{SCENARIOS}', list),
     messages: [{ role: 'user', content }],
     maxTokens: 1500,
+    json: true,
   });
   const r = sanitize(parseJson<RawAnalysis>(raw));
 

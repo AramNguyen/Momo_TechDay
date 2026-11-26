@@ -11,96 +11,96 @@ export default function ResultCard({ r }: { r: AnalyzeResponse }) {
   const isNew = sc ? sc.just_created || isNewScenario(sc.first_report) : false;
 
   return (
-    <section className={`card result ${meta.className}`}>
-      <div className="verdict-row">
-        <span className={`badge ${meta.className}`}>
-          {meta.emoji} {meta.label}
-        </span>
-        <div className="risk">
-          <div className="risk-bar">
-            <div className={`risk-fill ${meta.className}`} style={{ width: `${r.risk}%` }} />
-          </div>
-          <small>Mức nguy hiểm {r.risk}/100</small>
+    <section className={`result ${meta.className}`} aria-live="polite">
+      <div className="result-head">
+        <div className={`stamp ${meta.className}`} role="img" aria-label={`Kết luận: ${meta.label}, mức nguy hiểm ${r.risk} trên 100`}>
+          <span className="stamp-word">{meta.label}</span>
+          <span className="stamp-risk">Nguy hiểm {r.risk}/100</span>
         </div>
+
+        {sc && (
+          <div className="scenario">
+            <p className="scenario-name">
+              {sc.name}
+              {isNew && <span className="tag-new">Mới</span>}
+            </p>
+            <p className="scenario-desc">{sc.description}</p>
+            <p className="crowd">
+              <strong>{sc.real_count}</strong> người đã gửi cho Bà kịch bản này
+              {sc.sim_count > 0 && <span className="muted"> (thêm {sc.sim_count} mẫu mô phỏng)</span>}
+            </p>
+          </div>
+        )}
       </div>
 
-      {sc && (
-        <div className="scenario-box">
-          <div>
-            <b>{sc.name}</b> {isNew && <span className="tag-new">MỚI</span>}
-          </div>
-          <div className="muted">{sc.description}</div>
-          <div className="crowd">
-            👥 <b>{sc.real_count}</b> người đã gửi cho bà kịch bản này
-            {sc.sim_count > 0 && <span className="muted"> (+{sc.sim_count} mẫu mô phỏng)</span>}
-          </div>
-        </div>
-      )}
+      {r.grandma_note && <blockquote className="grandma">{r.grandma_note}</blockquote>}
 
-      {r.summary && <p>{r.summary}</p>}
+      {r.summary && <p className="summary">{r.summary}</p>}
 
       {r.tactics.length > 0 && (
-        <div className="chips">
+        <ul className="chips" aria-label="Chiêu tâm lý">
           {r.tactics.map((t) => (
-            <span key={t} className="chip">
+            <li key={t} className="chip">
               {TACTIC_LABELS[t] ?? t}
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {r.red_flags.length > 0 && (
-        <>
-          <h3>🔎 Dấu hiệu nhận biết</h3>
-          <ul>
+        <div className="block">
+          <h3>Dấu hiệu nhận biết</h3>
+          <ul className="list">
             {r.red_flags.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
-        </>
+        </div>
       )}
 
       {r.advice.length > 0 && (
-        <>
-          <h3>✅ Con làm ngay</h3>
-          <ul>
+        <div className="block">
+          <h3>Con nên làm ngay</h3>
+          <ul className="list">
             {r.advice.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
           </ul>
-        </>
+        </div>
       )}
 
-      {r.grandma_note && <blockquote className="grandma">👵 {r.grandma_note}</blockquote>}
-
       {r.troll_replies.length > 0 && (
-        <>
-          <h3>🧶 Troll câu giờ tụi nó</h3>
-          <p className="muted">Copy rồi dán lại cho kẻ lừa. Nó càng mất thời gian với con thì càng ít thời gian lừa người khác.</p>
+        <div className="block">
+          <h3>Câu giờ kẻ lừa</h3>
+          <p className="muted small">
+            Copy rồi gửi lại cho nó. Nó càng tốn thời gian với con thì càng ít thời gian lừa người khác. Tuyệt đối không chuyển
+            tiền hay đưa mã OTP.
+          </p>
           {r.troll_replies.map((x, i) => (
             <div key={i} className="troll">
-              <span>{x}</span>
+              <p>{x}</p>
               <CopyButton text={x} />
             </div>
           ))}
-        </>
+        </div>
       )}
 
       {r.iocs.length > 0 && (
-        <>
-          <h3>🏴 Bà đã ghi sổ đen</h3>
+        <div className="block">
+          <h3>Bà đã ghi vào sổ đen</h3>
           <ul className="iocs">
             {r.iocs.map((i, k) => (
               <li key={k}>
-                <span className="chip">{IOC_TYPE_LABELS[i.type]}</span> <code>{i.value}</code>
-                {i.bank ? <span className="muted"> · {i.bank}</span> : null}{' '}
+                <span className="ioc-type">{IOC_TYPE_LABELS[i.type]}</span>
+                <code>{i.value}</code>
+                {i.bank ? <span className="muted">{i.bank}</span> : null}
                 {(i.type === 'bank_account' || i.type === 'phone') && (
                   <Link href={`/kiem-tra-stk?q=${encodeURIComponent(i.value)}`}>Tra cứu</Link>
                 )}
               </li>
             ))}
           </ul>
-        </>
+        </div>
       )}
     </section>
   );

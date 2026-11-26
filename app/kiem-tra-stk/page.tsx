@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import type { CheckResponse } from '@/lib/types';
+import { readJson } from '@/lib/api-client';
 
 async function check(q: string): Promise<CheckResponse> {
   const res = await fetch(`/api/check-account?q=${encodeURIComponent(q)}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
-  return data as CheckResponse;
+  return readJson<CheckResponse>(res);
 }
 
 function CheckResult({ r }: { r: CheckResponse }) {
   if (!r.flagged) {
     return (
       <div className="check ok">
-        ✅ Bà chưa thấy ai báo cáo <code>{r.query}</code>. Chưa có báo cáo không có nghĩa là chắc chắn an toàn, con vẫn nên gọi
+        Bà chưa thấy ai báo cáo <code>{r.query}</code>. Chưa có báo cáo không có nghĩa là chắc chắn an toàn, con vẫn nên gọi
         xác minh với người nhận.
       </div>
     );
@@ -23,7 +22,7 @@ function CheckResult({ r }: { r: CheckResponse }) {
   const simOnly = r.matches.every((m) => m.simulated_only);
   return (
     <div className="check danger">
-      🚨 <b>Đã bị báo cáo {total} lần</b>
+      <strong>Đã bị báo cáo {total} lần</strong>
       {simOnly && <span className="muted"> (dữ liệu mô phỏng)</span>}
       <ul>
         {r.matches.map((m, i) => (
@@ -90,17 +89,18 @@ export default function KiemTraStk() {
   return (
     <>
       <section className="hero">
-        <h1>🔍 Kiểm tra STK / SĐT</h1>
-        <p>Trước khi chuyển tiền, tra xem số tài khoản, số điện thoại hoặc link đã bị ai báo cáo lừa đảo chưa.</p>
+        <h1>Kiểm tra STK, SĐT</h1>
+        <p className="lede">Trước khi chuyển tiền, tra xem số tài khoản, số điện thoại hoặc link đã bị ai báo cáo lừa đảo chưa.</p>
       </section>
 
-      <section className="card">
+      <section className="sheet">
         <div className="row">
           <input
+            aria-label="STK, SĐT hoặc link cần kiểm tra"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && lookup(q)}
-            placeholder="Nhập STK, SĐT hoặc link…"
+            placeholder="Nhập STK, SĐT hoặc link"
             inputMode="text"
           />
           <button type="button" className="btn-primary" onClick={() => lookup(q)} disabled={loading}>
@@ -114,11 +114,15 @@ export default function KiemTraStk() {
         </p>
       </section>
 
-      <section className="card wallet">
-        <div className="wallet-head">
-          <b>💳 Ví Demo</b>
-          <span className="muted small">Màn mô phỏng: ví điện tử gọi API của Bà trước khi chuyển tiền</span>
+      <section className="wallet-wrap">
+        <div className="wallet-intro">
+          <h2>Ví Demo</h2>
+          <p className="muted small">
+            Mô phỏng cách một ví điện tử gọi API của Bà ngay trước khi con bấm chuyển tiền. Thử nhập 9999 0012 3456 78.
+          </p>
         </div>
+        <div className="wallet">
+        <div className="wallet-bar">Chuyển tiền</div>
 
         {(step === 'form' || step === 'checking') && (
           <div className="wallet-form">
@@ -142,7 +146,7 @@ export default function KiemTraStk() {
 
         {step === 'blocked' && hit && (
           <div className="block-modal">
-            <div className="block-title">⛔ Khoan đã!</div>
+            <div className="block-title">Khoan đã</div>
             <p>
               Tài khoản người nhận đã bị <b>{hit.matches.reduce((a, m) => a + m.report_count, 0)} người</b> báo cáo lừa đảo
               {hit.matches[0]?.scenario ? (
@@ -187,7 +191,7 @@ export default function KiemTraStk() {
 
         {step === 'cancelled' && (
           <div className="check ok">
-            🛡️ Đã hủy giao dịch. Bà tự hào về con!{' '}
+            Đã hủy giao dịch. Bà tự hào về con.{' '}
             <button type="button" className="btn-small" onClick={() => setStep('form')}>
               Làm lại
             </button>
@@ -201,6 +205,7 @@ export default function KiemTraStk() {
             </button>
           </div>
         )}
+        </div>
       </section>
     </>
   );

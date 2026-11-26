@@ -18,7 +18,7 @@ export default function CopyButton({ text, label = 'Copy' }: { text: string; lab
         }
       }}
     >
-      {done ? 'Đã copy ✓' : label}
+      {done ? 'Đã copy' : label}
     </button>
   );
 }

@@ -64,35 +64,35 @@ async function downloadImage(fileId: string): Promise<{ data: string; mediaType:
 function formatResult(r: AnalyzeResponse): string {
   const meta = VERDICT_META[r.verdict];
   const site = process.env.NEXT_PUBLIC_SITE_URL;
-  const lines: string[] = [`${meta.emoji} <b>${meta.label}</b> (mức nguy hiểm ${r.risk}/100)`];
+  const lines: string[] = [`<b>${meta.label.toUpperCase()}</b> (mức nguy hiểm ${r.risk}/100)`];
 
   if (r.scenario) {
     const isNew = r.scenario.just_created || isNewScenario(r.scenario.first_report);
     lines.push(
-      `📂 Kịch bản: <b>${esc(r.scenario.name)}</b>${isNew ? ' 🆕' : ''}`,
-      `👥 ${r.scenario.real_count} người đã gửi cho bà kịch bản này`,
+      `Kịch bản: <b>${esc(r.scenario.name)}</b>${isNew ? ' (mới)' : ''}`,
+      `${r.scenario.real_count} người đã gửi cho bà kịch bản này`,
     );
   }
   if (r.summary) lines.push('', esc(r.summary));
-  if (r.red_flags.length) lines.push('', '🔎 <b>Dấu hiệu:</b>', ...r.red_flags.map((x) => `• ${esc(x)}`));
-  if (r.advice.length) lines.push('', '✅ <b>Làm ngay:</b>', ...r.advice.map((x) => `• ${esc(x)}`));
+  if (r.red_flags.length) lines.push('', '<b>Dấu hiệu:</b>', ...r.red_flags.map((x) => `- ${esc(x)}`));
+  if (r.advice.length) lines.push('', '<b>Con nên làm ngay:</b>', ...r.advice.map((x) => `- ${esc(x)}`));
   if (r.iocs.length) {
-    lines.push('', '🏴 <b>Đã ghi sổ đen:</b>', ...r.iocs.map((i) => `• ${IOC_TYPE_LABELS[i.type]}: ${esc(i.value)}`));
+    lines.push('', '<b>Bà đã ghi vào sổ đen:</b>', ...r.iocs.map((i) => `- ${IOC_TYPE_LABELS[i.type]}: ${esc(i.value)}`));
   }
-  if (r.grandma_note) lines.push('', `👵 <i>${esc(r.grandma_note)}</i>`);
-  if (r.troll_replies.length) lines.push('', '🧶 Muốn câu giờ tụi nó? Chạm vào tin bên dưới để copy rồi dán lại cho nó:');
-  if (site) lines.push('', `📰 Bản tin lừa đảo: ${site}/canh-bao`);
+  if (r.grandma_note) lines.push('', `<i>${esc(r.grandma_note)}</i>`);
+  if (r.troll_replies.length) lines.push('', 'Muốn câu giờ kẻ lừa? Chạm vào tin bên dưới để copy rồi gửi lại cho nó:');
+  if (site) lines.push('', `Bản tin lừa đảo: ${site}/canh-bao`);
   return lines.join('\n');
 }
 
 const WELCOME = [
-  '👵 <b>Bà Ngoại AI đây con!</b>',
+  '<b>Bà Ngoại AI đây con.</b>',
   '',
   'Gặp tin nhắn, cuộc gọi hay đoạn chat khả nghi thì <b>chuyển tiếp (forward)</b>, dán nội dung, hoặc <b>gửi ảnh chụp màn hình</b> cho bà.',
   'Bà sẽ:',
-  '• Nói con nghe có phải lừa đảo không, chiêu gì',
-  '• Chỉ con việc cần làm ngay',
-  '• Soạn sẵn câu để con troll câu giờ tụi nó 😏',
+  '- Nói con nghe có phải lừa đảo không, chiêu gì',
+  '- Chỉ con việc cần làm ngay',
+  '- Soạn sẵn câu để con câu giờ kẻ lừa',
   '',
   'Mỗi tin con gửi giúp cả nước biết thêm một chiêu lừa mới đó.',
 ].join('\n');
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     console.error('[api/telegram]', e);
-    await send(chatId, 'Bà đang bận xíu, con gửi lại sau nha 🙏').catch(() => undefined);
+    await send(chatId, 'Bà đang bận xíu, con gửi lại sau nha.').catch(() => undefined);
   }
   // Luôn trả 200 để Telegram không gửi lại update
   return new Response('ok');

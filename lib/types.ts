@@ -9,7 +9,7 @@ export interface Ioc {
   bank?: string | null;
 }
 
-/** JSON mà Claude trả về ở bước Gọi Bà (xem lib/prompts.ts). */
+/** JSON mà AI trả về ở bước Gọi Bà (xem lib/prompts.ts). */
 export interface RawAnalysis {
   verdict: Verdict;
   risk: number;
@@ -93,10 +93,10 @@ export const STAGE_LABELS: Record<string, string> = {
   doi_tien: 'Đòi tiền / thông tin',
 };
 
-export const VERDICT_META: Record<Verdict, { label: string; className: string; emoji: string }> = {
-  lua_dao: { label: 'LỪA ĐẢO', className: 'danger', emoji: '🚨' },
-  nghi_ngo: { label: 'NGHI NGỜ', className: 'warn', emoji: '⚠️' },
-  an_toan: { label: 'CÓ VẺ AN TOÀN', className: 'ok', emoji: '✅' },
+export const VERDICT_META: Record<Verdict, { label: string; className: string }> = {
+  lua_dao: { label: 'Lừa đảo', className: 'danger' },
+  nghi_ngo: { label: 'Nghi ngờ', className: 'warn' },
+  an_toan: { label: 'Có vẻ an toàn', className: 'ok' },
 };
 
 export const NEW_SCENARIO_DAYS = 7;

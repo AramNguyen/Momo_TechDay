@@ -1,10 +1,11 @@
 // Báo cáo cuối màn "Thử lừa Bà". Lưu vào bait_sessions (KHÔNG tính vào thống kê kịch bản thật).
-import { callClaude, parseJson } from '@/lib/claude';
+import { callAI, parseJson } from '@/lib/llm';
 import { BAIT_REPORT_SYSTEM } from '@/lib/prompts';
 import { clientIp, guard } from '@/lib/ratelimit';
 import { db } from '@/lib/supabase';
 import { validateTurns } from '@/lib/turns';
 import type { BaitReport } from '@/lib/types';
+import { userError } from '@/lib/server-error';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -34,10 +35,11 @@ export async function POST(req: Request) {
   const transcript = turns.map((t) => `${t.role === 'user' ? 'NGƯỜI NHẮN' : 'BÀ TƯ'}: ${t.content}`).join('\n');
 
   try {
-    const raw = await callClaude({
+    const raw = await callAI({
       system: BAIT_REPORT_SYSTEM,
       messages: [{ role: 'user', content: `<hoi_thoai>\n${transcript}\n</hoi_thoai>` }],
       maxTokens: 1200,
+      json: true,
     });
     const p = parseJson<Record<string, unknown>>(raw);
     const report: BaitReport = {
@@ -65,6 +67,6 @@ export async function POST(req: Request) {
     return Response.json({ report });
   } catch (e) {
     console.error('[api/bait/report]', e);
-    return Response.json({ error: 'Bà chưa viết xong báo cáo, con bấm lại nha.' }, { status: 500 });
+    return Response.json({ error: userError(e, 'Bà chưa viết xong báo cáo, con bấm lại nha.') }, { status: 500 });
   }
 }
