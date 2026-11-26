@@ -78,7 +78,7 @@ npm run dev     # http://localhost:3000
 ### 5. Deploy Vercel
 1. Import repo trên vercel.com.
 2. Khai báo các biến trong mục **Biến môi trường** ở **Settings → Environment Variables** (nhớ `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`).
-3. **Settings → Functions → Region**: chọn Singapore (`sin1`) cho gần database Supabase.
+3. Server chạy ở Singapore (`sin1`, khai báo sẵn trong `vercel.json`) cho gần database Supabase.
 4. Deploy xong thì đăng ký webhook Telegram (thay `<TOKEN>`, `<DOMAIN>`, `<SECRET>`):
 ```bash
 curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<DOMAIN>/api/telegram&secret_token=<SECRET>&allowed_updates=%5B%22message%22%5D"

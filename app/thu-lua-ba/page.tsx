@@ -13,6 +13,11 @@ const ROLES = [
 
 const MAX_TURNS = 60;
 
+// Bà gõ chậm, mổ cò từng chữ: khoảng 11 ký tự/giây, tin càng dài chờ càng lâu (tối đa 10s),
+// cộng chút ngẫu nhiên cho khỏi đều như máy
+const typingDelay = (text: string) => Math.min(10000, 1000 + text.length * 90) * (0.85 + Math.random() * 0.3);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 function fmt(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -29,6 +34,9 @@ export default function ThuLuaBa() {
   const [report, setReport] = useState<BaitReport | null>(null);
   const [duration, setDuration] = useState(0);
   const [reporting, setReporting] = useState(false);
+  // Số dòng (tin nhắn nhỏ) của lượt trả lời mới nhất đã hiện ra; null = hiện hết
+  const [shownLines, setShownLines] = useState<number | null>(null);
+  const revealId = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +47,7 @@ export default function ThuLuaBa() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [turns, loading]);
+  }, [turns, loading, shownLines]);
 
   const elapsed = startedAt ? Math.floor(((report ? startedAt + duration * 1000 : now) - startedAt) / 1000) : 0;
   const full = turns.length >= MAX_TURNS - 1;
@@ -52,7 +60,9 @@ export default function ThuLuaBa() {
     setInput('');
     setError(null);
     if (!startedAt) setStartedAt(Date.now());
+    setShownLines(null);
     setLoading(true);
+    const sentAt = Date.now();
     try {
       const res = await fetch('/api/bait', {
         method: 'POST',
@@ -60,7 +70,20 @@ export default function ThuLuaBa() {
         body: JSON.stringify({ messages: next }),
       });
       const data = await readJson<{ reply: string }>(res);
-      setTurns([...next, { role: 'assistant', content: data.reply }]);
+      const lines = data.reply.split('\n').filter((l) => l.trim());
+      // Đợi cho đủ thời gian "gõ" tin đầu (trừ phần đã chờ AI), rồi hiện từng tin một
+      const id = ++revealId.current;
+      await sleep(Math.max(0, typingDelay(lines[0] ?? '') - (Date.now() - sentAt)));
+      if (id !== revealId.current) return;
+      setTurns([...next, { role: 'assistant', content: lines.join('\n') }]);
+      setShownLines(1);
+      setLoading(false);
+      for (let k = 1; k < lines.length; k++) {
+        await sleep(typingDelay(lines[k]));
+        if (id !== revealId.current) return;
+        setShownLines(k + 1);
+      }
+      setShownLines(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
       setTurns(turns); // trả lại trạng thái cũ để thứ tự user/assistant không lệch
@@ -92,6 +115,8 @@ export default function ThuLuaBa() {
   }
 
   function reset() {
+    revealId.current++;
+    setShownLines(null);
     setTurns([]);
     setReport(null);
     setStartedAt(null);
@@ -136,12 +161,27 @@ export default function ThuLuaBa() {
         </div>
         <div className="chat-body">
           {turns.length === 0 && <p className="muted chat-empty">Gửi tin đầu tiên để bắt đầu lừa bà.</p>}
-          {turns.map((t, i) => (
-            <div key={i} className={`bubble ${t.role === 'user' ? 'me' : 'ba'}`}>
-              {t.content}
-            </div>
-          ))}
-          {loading && <div className="bubble ba typing">Bà đang gõ…</div>}
+          {turns.map((t, i) => {
+            if (t.role === 'user') {
+              return (
+                <div key={i} className="bubble me">
+                  {t.content}
+                </div>
+              );
+            }
+            // Tin của bà: mỗi dòng là một bong bóng riêng; lượt mới nhất hiện dần
+            const lines = t.content.split('\n').filter((l) => l.trim());
+            const isLast = i === turns.length - 1;
+            const visible = isLast && shownLines !== null ? lines.slice(0, shownLines) : lines;
+            return visible.map((l, k) => (
+              <div key={`${i}-${k}`} className="bubble ba">
+                {l}
+              </div>
+            ));
+          })}
+          {(loading || (shownLines !== null && turns.length > 0 && shownLines < turns[turns.length - 1].content.split('\n').filter((l) => l.trim()).length)) && (
+            <div className="bubble ba typing">Bà đang gõ…</div>
+          )}
           <div ref={bottomRef} />
         </div>
         {!report && (

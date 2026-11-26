@@ -22,6 +22,10 @@ export interface AIOptions {
 }
 
 const THINKING_HEADROOM = 4096;
+/** Mỗi model chỉ được chờ tối đa chừng này; quá thì nhảy sang model sau. */
+const TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS || 25000);
+/** Mức "suy nghĩ" của Gemini 3.x: low cho nhanh. Đặt GEMINI_THINKING_LEVEL= (trống) để tắt dòng này. */
+const THINKING_LEVEL = process.env.GEMINI_THINKING_LEVEL ?? 'low';
 
 // Tin lừa đảo toàn chữ "khởi tố", "ma túy", dọa nạt... nên hạ bộ lọc xuống chỉ chặn mức cao.
 const SAFETY = [
@@ -70,19 +74,40 @@ async function callGemini(o: AIOptions, model: string): Promise<string> {
           ),
   }));
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: o.system }] },
-      contents,
-      safetySettings: SAFETY,
-      generationConfig: {
-        maxOutputTokens: (o.maxTokens ?? 1500) + THINKING_HEADROOM,
-        ...(o.json ? { responseMimeType: 'application/json' } : {}),
-      },
-    }),
-  });
+  const send = (withThinking: boolean) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: o.system }] },
+        contents,
+        safetySettings: SAFETY,
+        generationConfig: {
+          maxOutputTokens: (o.maxTokens ?? 1500) + THINKING_HEADROOM,
+          ...(o.json ? { responseMimeType: 'application/json' } : {}),
+          ...(withThinking && THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}),
+        },
+      }),
+    });
+
+  const t0 = Date.now();
+  let res: Response;
+  try {
+    res = await send(true);
+    // Model nào không hỗ trợ thinkingLevel thì gọi lại không kèm tùy chọn đó
+    if (res.status === 400 && THINKING_LEVEL) {
+      const body = await res.text();
+      if (/thinking/i.test(body)) res = await send(false);
+      else throw new Error(`Gemini 400 (${model}): ${body.slice(0, 300)}`);
+    }
+  } catch (e) {
+    if (e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+      throw new Error(`Gemini quá ${Math.round(TIMEOUT_MS / 1000)}s không trả lời (${model})`);
+    }
+    throw e;
+  }
+  console.log(`[ai] ${model}: ${res.status} sau ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
   if (!res.ok) {
     const body = await res.text();
@@ -113,6 +138,7 @@ async function callGroq(o: AIOptions): Promise<string> {
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
+    signal: AbortSignal.timeout(TIMEOUT_MS),
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
