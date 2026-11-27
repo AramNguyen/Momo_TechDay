@@ -37,8 +37,31 @@ export interface ScenarioInfo {
   just_created: boolean;
 }
 
+export interface SignalEvidence {
+  label: string;
+  value: string;
+}
+
+export interface RiskSignal {
+  code: string;
+  label: string;
+  detail: string;
+  weight: number;
+  severity: 'high' | 'medium' | 'info';
+  evidence?: SignalEvidence[];
+}
+
+export interface ScoreBreakdown {
+  ai_risk: number;
+  signal_boost: number;
+  final_risk: number;
+  guardrail_triggered?: boolean;
+}
+
 export interface AnalyzeResponse extends Omit<RawAnalysis, 'scenario_match_id' | 'new_scenario'> {
   scenario: ScenarioInfo | null;
+  signals?: RiskSignal[];
+  score_breakdown?: ScoreBreakdown;
 }
 
 export interface ChatTurn {

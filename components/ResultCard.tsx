@@ -94,12 +94,66 @@ export default function ResultCard({ r }: { r: AnalyzeResponse }) {
                 <span className="ioc-type">{IOC_TYPE_LABELS[i.type]}</span>
                 <code>{i.value}</code>
                 {i.bank ? <span className="muted">{i.bank}</span> : null}
-                {(i.type === 'bank_account' || i.type === 'phone') && (
+                {(i.type === 'bank_account' || i.type === 'phone' || i.type === 'url') && (
                   <Link href={`/kiem-tra-stk?q=${encodeURIComponent(i.value)}`}>Tra cứu</Link>
                 )}
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {((r.signals && r.signals.length > 0) || r.score_breakdown) && (
+        <div className="block">
+          <h3>Bằng chứng kỹ thuật &amp; cách tính điểm</h3>
+          {r.score_breakdown && (
+            <div className="score-grid" aria-label="Thành phần điểm rủi ro">
+              <div className="score-cell">
+                <span>AI (ngữ nghĩa)</span>
+                <b>{r.score_breakdown.ai_risk}/100</b>
+              </div>
+              <div className="score-cell">
+                <span>Kỹ thuật (cộng/trừ)</span>
+                <b>
+                  {r.score_breakdown.signal_boost >= 0
+                    ? `+${r.score_breakdown.signal_boost}`
+                    : r.score_breakdown.signal_boost}
+                </b>
+              </div>
+              <div className="score-cell">
+                <span>Điểm cuối</span>
+                <b>{r.score_breakdown.final_risk}/100</b>
+              </div>
+              {r.score_breakdown.guardrail_triggered && (
+                <span className="guardrail-badge">Guardrail đã nâng mức cảnh báo</span>
+              )}
+            </div>
+          )}
+          {r.signals && r.signals.length > 0 && (
+            <ul className="signals">
+              {r.signals.map((s, k) => (
+                <li key={k} className={`signal-item signal-${s.severity}`}>
+                  <div className="signal-head">
+                    <strong>{s.label}</strong>
+                    {s.weight !== 0 && (
+                      <span className="signal-weight">{s.weight > 0 ? `+${s.weight} điểm` : `${s.weight} điểm`}</span>
+                    )}
+                  </div>
+                  {s.evidence && s.evidence.length > 0 ? (
+                    <div className="evidence-row">
+                      {s.evidence.map((ev, idx) => (
+                        <span key={idx} className="evidence-pill">
+                          {ev.label}: <code>{ev.value}</code>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="muted small">{s.detail}</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </section>
