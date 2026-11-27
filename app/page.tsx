@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
 import ResultCard from '@/components/ResultCard';
+import FlipIntro from '@/components/FlipIntro';
 import { fileToJpegBase64 } from '@/lib/image-client';
 import type { AnalyzeResponse } from '@/lib/types';
 import { readJson } from '@/lib/api-client';
@@ -88,8 +89,10 @@ export default function Home() {
 
   return (
     <>
-      <section className="hero">
-        <h1>Gặp lừa đảo? Gọi Bà.</h1>
+      <FlipIntro />
+
+      <section className="hero hero-ask">
+        <h2>Gặp lừa đảo? Gọi Bà.</h2>
         <p className="lede">
           Dán tin nhắn hoặc gửi ảnh chụp màn hình Zalo, Messenger, SMS mà con thấy khả nghi. Bà nói con nghe có phải lừa không,
           con cần làm gì ngay, rồi soạn sẵn câu để con câu giờ kẻ lừa.

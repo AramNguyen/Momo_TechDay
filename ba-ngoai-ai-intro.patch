@@ -1,0 +1,300 @@
+diff --git a/app/globals.css b/app/globals.css
+index d22902a..2a276c2 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -21,6 +21,7 @@
+   --amber-wash: #fff3dc;
+   --green: #1b7a43;
+   --green-wash: #e7f4ec;
++  --orange: #e8590c;
+ 
+   --font-body-stack: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+   --font-stamp-stack: var(--font-stamp), 'Arial Narrow', var(--font-body-stack);
+@@ -127,6 +128,9 @@ h3 {
+   gap: 16px;
+ }
+ .brand {
++  display: inline-flex;
++  align-items: center;
++  gap: 10px;
+   font-weight: 700;
+   font-size: 1.08rem;
+   color: var(--violet);
+@@ -193,6 +197,108 @@ h3 {
+   margin-bottom: 20px;
+ }
+ 
++/* ---------- Giới thiệu đầu trang: ô màu tự lật ---------- */
++
++.brand-logo {
++  width: 28px;
++  height: 28px;
++  flex-shrink: 0;
++}
++
++.intro {
++  margin: 44px 0 8px;
++}
++.intro-title {
++  font-size: clamp(2.1rem, 5vw + 1rem, 3.2rem);
++  line-height: 1.15;
++  letter-spacing: -0.02em;
++  margin: 0 0 18px;
++}
++.intro-brand {
++  white-space: nowrap;
++}
++
++/* Nút chứa thẻ lật: hai mặt chồng lên nhau nên ô luôn rộng bằng mặt dài hơn */
++.flip {
++  display: inline-grid;
++  vertical-align: bottom;
++  background: none;
++  border: none;
++  padding: 0;
++  margin: 0;
++  font: inherit;
++  color: inherit;
++  perspective: 700px;
++  cursor: pointer;
++  border-radius: 10px;
++}
++.flip-card {
++  display: grid;
++  transform-style: preserve-3d;
++  transition: transform 700ms cubic-bezier(0.45, 0.05, 0.2, 1);
++}
++.flip-face {
++  grid-area: 1 / 1;
++  justify-self: start; /* mỗi mặt ôm vừa chữ của nó */
++  display: block;
++  padding: 0.04em 0.32em 0.02em;
++  border-radius: 10px;
++  color: #fff;
++  font-family: var(--font-stamp-stack);
++  font-weight: 700;
++  font-size: 1.08em;
++  letter-spacing: 0.02em;
++  white-space: nowrap;
++  text-align: left;
++  backface-visibility: hidden;
++  -webkit-backface-visibility: hidden;
++}
++.flip-face.front {
++  background: var(--orange);
++}
++.flip-face.back {
++  background: var(--violet);
++  transform: rotateX(180deg);
++}
++
++/* Đoạn chữ bên dưới đổi theo mặt đang hiện */
++.intro-body {
++  display: grid;
++  max-width: 62ch;
++}
++.intro-text {
++  grid-area: 1 / 1;
++  margin: 0;
++  font-size: 1.1rem;
++  line-height: 1.65;
++  opacity: 0;
++  transform: translateY(6px);
++  transition:
++    opacity 450ms ease,
++    transform 450ms ease;
++  pointer-events: none;
++}
++.intro-text.is-active {
++  opacity: 1;
++  transform: none;
++  pointer-events: auto;
++  transition-delay: 250ms;
++}
++.intro-hint {
++  margin: 10px 0 0;
++  font-size: 0.85rem;
++  color: var(--muted);
++}
++
++.hero-ask {
++  margin-top: 36px;
++}
++.hero-ask h2 {
++  font-size: clamp(1.5rem, 2vw + 1rem, 1.9rem);
++  letter-spacing: -0.01em;
++  margin: 0 0 8px;
++}
++
+ /* ---------- Ô nhập + nút ---------- */
+ 
+ textarea,
+@@ -788,6 +894,19 @@ button:disabled {
+   body {
+     font-size: 16px;
+   }
++  .intro {
++    margin-top: 28px;
++  }
++  .intro-title {
++    font-size: 1.95rem;
++  }
++  .flip,
++  .flip-card {
++    max-width: 100%;
++  }
++  .flip-face {
++    white-space: normal; /* màn hẹp thì cho xuống dòng, không tràn */
++  }
+   .hero {
+     margin-top: 28px;
+   }
+@@ -822,4 +941,8 @@ button:disabled {
+   .stamp {
+     animation: none;
+   }
++  .flip-card,
++  .intro-text {
++    transition: none;
++  }
+ }
+diff --git a/app/page.tsx b/app/page.tsx
+index 6057298..8136c8e 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -2,6 +2,7 @@
+ 
+ import { useRef, useState, type ClipboardEvent, type DragEvent } from 'react';
+ import ResultCard from '@/components/ResultCard';
++import FlipIntro from '@/components/FlipIntro';
+ import { fileToJpegBase64 } from '@/lib/image-client';
+ import type { AnalyzeResponse } from '@/lib/types';
+ import { readJson } from '@/lib/api-client';
+@@ -88,8 +89,10 @@ export default function Home() {
+ 
+   return (
+     <>
+-      <section className="hero">
+-        <h1>Gặp lừa đảo? Gọi Bà.</h1>
++      <FlipIntro />
++
++      <section className="hero hero-ask">
++        <h2>Gặp lừa đảo? Gọi Bà.</h2>
+         <p className="lede">
+           Dán tin nhắn hoặc gửi ảnh chụp màn hình Zalo, Messenger, SMS mà con thấy khả nghi. Bà nói con nghe có phải lừa không,
+           con cần làm gì ngay, rồi soạn sẵn câu để con câu giờ kẻ lừa.
+diff --git a/components/FlipIntro.tsx b/components/FlipIntro.tsx
+new file mode 100644
+index 0000000..ffe330b
+--- /dev/null
++++ b/components/FlipIntro.tsx
+@@ -0,0 +1,71 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++
++// Phần giới thiệu đầu trang: "BÀ NGOẠI AI" + ô màu tự lật giữa hai câu hỏi.
++// Mặt cam: LÀM GÌ?  Mặt tím: HOẠT ĐỘNG RA SAO?  Đoạn chữ bên dưới đổi theo mặt đang hiện.
++const SIDES = [
++  {
++    label: 'LÀM GÌ?',
++    body:
++      'Bà Ngoại AI là project hoạt động với mong muốn giải quyết được một mối lo đáng quan ngại trong xã hội về vấn đề lừa đảo qua SĐT. ' +
++      'Gặp tin nhắn hay cuộc gọi khả nghi, con gửi cho Bà: Bà nói thẳng có phải lừa không, chỉ con việc cần làm ngay, ' +
++      'rồi soạn sẵn câu để con câu giờ kẻ lừa thay vì mất tiền.',
++  },
++  {
++    label: 'HOẠT ĐỘNG RA SAO?',
++    body:
++      'Con dán tin nhắn hoặc gửi ảnh chụp màn hình Zalo, Messenger, SMS. AI đọc nội dung, đối chiếu với kho kịch bản lừa đảo ' +
++      'mà mọi người đã gửi về, rồi ghi số tài khoản, số điện thoại, đường link của kẻ lừa vào sổ đen chung. ' +
++      'Mỗi người hỏi Bà là thêm một người được cảnh báo, và ví điện tử có thể tra sổ đen này ngay trước khi con bấm chuyển tiền.',
++  },
++];
++
++const INTERVAL_MS = 7000;
++
++export default function FlipIntro() {
++  // Đếm số lần lật thay vì lưu mặt hiện tại, để lần nào cũng lật cùng một chiều
++  const [flips, setFlips] = useState(0);
++  const [paused, setPaused] = useState(false);
++  const side = flips % SIDES.length;
++
++  useEffect(() => {
++    if (paused) return;
++    const t = setTimeout(() => setFlips((f) => f + 1), INTERVAL_MS);
++    return () => clearTimeout(t);
++  }, [paused, flips]);
++
++  return (
++    <section
++      className="intro"
++      onMouseEnter={() => setPaused(true)}
++      onMouseLeave={() => setPaused(false)}
++      onFocus={() => setPaused(true)}
++      onBlur={() => setPaused(false)}
++    >
++      <h1 className="intro-title">
++        <span className="intro-brand">BÀ NGOẠI AI</span>{' '}
++        <button
++          type="button"
++          className="flip"
++          onClick={() => setFlips((f) => f + 1)}
++          aria-label={`${SIDES[side].label} Bấm để lật`}
++        >
++          <span className="flip-card" style={{ transform: `rotateX(${-flips * 180}deg)` }} aria-hidden>
++            <span className="flip-face front">{SIDES[0].label}</span>
++            <span className="flip-face back">{SIDES[1].label}</span>
++          </span>
++        </button>
++      </h1>
++
++      <div className="intro-body" aria-live="polite">
++        {SIDES.map((s, i) => (
++          <p key={s.label} className={`intro-text${i === side ? ' is-active' : ''}`} aria-hidden={i !== side}>
++            {s.body}
++          </p>
++        ))}
++      </div>
++      <p className="intro-hint">Bấm vào ô màu để lật.</p>
++    </section>
++  );
++}
+diff --git a/components/Nav.tsx b/components/Nav.tsx
+index 15725e1..1926639 100644
+--- a/components/Nav.tsx
++++ b/components/Nav.tsx
+@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
+ 
+ const LINKS = [
+   { href: '/', label: 'Gọi Bà' },
+-  { href: '/thu-lua-ba', label: 'Thử lừa Bà' },
+   { href: '/canh-bao', label: 'Bản tin' },
+   { href: '/kiem-tra-stk', label: 'Kiểm tra STK' },
++  { href: '/thu-lua-ba', label: 'Thử lừa Bà' },
+ ];
+ 
+ export default function Nav() {
+@@ -16,6 +16,9 @@ export default function Nav() {
+     <header className="nav">
+       <div className="nav-inner">
+         <Link href="/" className="brand">
++          {/* Logo tạm, thay file public/logo.svg là xong */}
++          {/* eslint-disable-next-line @next/next/no-img-element */}
++          <img src="/logo.svg" alt="" width={28} height={28} className="brand-logo" />
+           Bà Ngoại AI
+         </Link>
+         <nav aria-label="Điều hướng chính">
+diff --git a/public/logo.svg b/public/logo.svg
+new file mode 100644
+index 0000000..f33c80c
+--- /dev/null
++++ b/public/logo.svg
+@@ -0,0 +1,7 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Bà Ngoại AI">
++  <!-- Logo tạm: con dấu tròn màu mực tím, chấm cam là "AI". Thay bằng logo thật thì giữ nguyên tên file public/logo.svg -->
++  <circle cx="16" cy="16" r="14.5" fill="#4a2c8f"/>
++  <circle cx="16" cy="16" r="11.3" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.2"/>
++  <text x="16" y="21.3" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14.5" font-weight="700" fill="#ffffff">B</text>
++  <circle cx="25" cy="7" r="3.6" fill="#e8590c" stroke="#ffffff" stroke-width="1.3"/>
++</svg>
