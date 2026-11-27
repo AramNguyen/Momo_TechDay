@@ -21,7 +21,7 @@ Người dân gửi tin nhắn hoặc ảnh chụp màn hình khả nghi cho Bà
 | `/kiem-tra-stk` | Tra STK/SĐT/link + màn **Ví Demo** mô phỏng chặn chuyển tiền |
 | Bot Telegram | Forward tin hoặc gửi ảnh → kết quả rút gọn + câu troll (chạm để copy) |
 | `GET /api/check-account?q=` | API công khai (CORS mở) cho ví/ngân hàng |
-
+ 
 ## Stack
 
 Next.js 16 (App Router, Vercel) + Supabase Postgres + Google Gemini API (đọc được ảnh) + Groq API (dự phòng) + Telegram Bot API.
